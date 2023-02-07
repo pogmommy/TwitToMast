@@ -1,0 +1,22 @@
+{
+  "name": "TwitToMast",
+  "version": "1.0.0",
+  "description": "Bypass Twitter's API to Crosspost to Mastodon",
+  "main": "TwitToMast.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["mastodon", "twitter"],
+  "author": "Pogmommy",
+  "license": "ISC",
+  "dependencies": {
+    "csv-write-stream": "^2.0.0",
+    "filesystem": "^1.0.1",
+    "https": "^1.0.0",
+    "image-convert": "^0.1.33",
+    "jimp": "^0.22.4",
+    "mastodon": "^1.2.2",
+    "selenium-webdriver": "^4.8.0",
+    "until": "^0.1.1"
+  }
+}
