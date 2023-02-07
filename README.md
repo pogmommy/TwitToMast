@@ -1,7 +1,7 @@
-#TwitToMast
+# TwitToMast
 Bypass paywalled APIs to crosspost from Twitter to Mastodon
 
-##Installation:
+## Installation:
 
 1. Clone the repo and set up the script's dependencies
 ```
@@ -30,7 +30,7 @@ npm install
 		- false: Thread tweets will not be sent to Mastodon
 	- While they can be independently configured, it's recommended that Lines 3 and 4 are set to the same value
 	
-##Usage
+## Usage
 
 ```
 node ./TwitToMast.js [username] [tweet count] [debug level]
@@ -42,5 +42,5 @@ node ./TwitToMast.js [username] [tweet count] [debug level]
 	- 2: The program will print what tasks it is working on and errors, as well as various other information necessary for troubleshooting.
 	- Omit this argument for the program to run silently (no output on screen)
 	
-##Other important details
+## Other important details
 - This program does not run on a loop on its own. If you need it to run automatically, you'll need to find a way to schedule the script to be executed periodically.
