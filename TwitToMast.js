@@ -156,7 +156,7 @@ debuglog("Setting up...",1);
 debuglog("userName: " + userName,1);
 debuglog("maxTweetScan: " + maxTweetScan,1);
 debuglog("debug: " + debug,1);
-debuglog("API_URL: " + config[0],1);
+debuglog("API_URL: " + config[1],1);
 debuglog("Enable Quote Tweets: " + modulesToEnable[0],1);
 debuglog("Enable Thread Tweets: " + modulesToEnable[1],1);
 
