@@ -42,5 +42,19 @@ node ./TwitToMast.js [username] [tweet count] [debug level]
 	- 2: The program will print what tasks it is working on and errors, as well as various other information necessary for troubleshooting.
 	- Omit this argument for the program to run silently (no output on screen)
 	
+## How Types of Tweets are handled
+
+- Self Posts
+	- Preserves Text, links, and still images
+- Quote Tweets
+	- Preserves Text, links, still images, and link to quoted tweet
+- Retweets
+	- Retweets are not cross-posted at the moment
+- Replies
+	- To self:
+		- Preserves Text, links, still images, but loses continuity (tweets are not stitched together in threads)
+	- To others:
+		- Replies to others are not cross-posted at the moment
+	
 ## Other important details
 - This program does not run on a loop on its own. If you need it to run automatically, you'll need to find a way to schedule the script to be executed periodically.
