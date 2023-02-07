@@ -8,8 +8,8 @@ const fs = require('fs');
 const csvWriter = require('csv-write-stream');
 const Masto = require('mastodon');
 const client = require('https');
-var Jimp = require("jimp");
-let imgConvert = require('image-convert');
+const request = require("request");
+const Q = require("q");
 
 //VALIDATE INPUT
 
@@ -114,42 +114,17 @@ function debuglog(debugString,logLevel) {
 		if (logLevel <= debug) {console.log(prefix + " " + debugString);}
 }
 
-function screenshotElement(driver, locator) {
-    return new Promise(async (resolve, reject) => {
-      try {
-        let base64Image = await driver.takeScreenshot();
-        let decodedImage = new Buffer(base64Image, "base64");
-        let dimensions = await driver.findElement(By.xpath(locator)).getRect();
-        debuglog(dimensions,2)
-        let xLoc = dimensions.x*0.7;
-        let yLoc = dimensions.y*0.7;
-        let eWidth = dimensions.width*0.7;
-        let eHeight = dimensions.height*0.7;
-        let image = await Jimp.read(decodedImage);
-        image.crop(xLoc, yLoc, eWidth, eHeight).getBase64(Jimp.AUTO, (err, data) => {
-          if (err) {
-            console.error(err)
-            reject(err)
-          }
-          imgConvert.fromBuffer({
-            buffer: data,
-            output_format: "jpg"
-          }, function (err, buffer, file) {
-            if (!err) {
-              let croppedImageDataBase64 = buffer.toString('base64')
-              resolve(croppedImageDataBase64)
+function expandUrl(shortUrl) {
+    var deferred = Q.defer();
+    request( { method: "HEAD", url: shortUrl, followAllRedirects: true },
+        function (error, response) {
+            if (error) {
+                deferred.reject(new Error(error));
+            } else {
+                deferred.resolve(response.request.href);
             }
-            else {
-              console.error(err.message);
-              reject(err)
-            }
-          })
         });
-      } catch (err) {
-        console.error(err.message);
-        reject(err)
-      }
-    })
+    return deferred.promise;
 }
 
 debuglog("Setting up...",1);
@@ -171,6 +146,8 @@ const timeLineXPath = `//*[@id="react-root"]/div/div/div[2]/main/div/div/div/div
 const tweetXPath = (timeLineXPath + `/div`); //the div containing individual tweet content: (tweetXpath + '[1]')
 
 //the following xpaths follow an individual tweet xpath: (tweetXpath + '[1]' + variableXPath)
+
+const urlCardXPath = `/div/div/div/article/div/div/div/div[*]/div[*]/div[*]/div[*]/div/div[2]/a`
 
 const quoteTweetHandleXPath = `/div/div/div/article/div/div/div/div[2]/div[2]/div[2]/div[2]/div[*]/div[2]/div/div[1]/div/div/div/div/div/div[2]/div[1]/div/div/div/span`; //xpath to text label that reveals if a tweet is a quote tweet (leads to the quote tweeted user's handle)
 
@@ -246,7 +223,7 @@ driver.executeScript("document.body.style.zoom='35%'");
 
 
 		//REMOVE NON-PRIMARY TWEETS
-		debuglog("Filtering out disabled tweets...",1)
+		debuglog("Filtering out disabled tweets...",2)
 		while (!keepTweet) {
 			await driver.wait(until.elementLocated(By.xpath(thisTweetXPath)), 30000);
 			
@@ -285,6 +262,7 @@ driver.executeScript("document.body.style.zoom='35%'");
 			        //webdriver.promise.rejected(err);
 			    }
 			});
+
 			//IF TWEET IS DISABLED, MARK FOR REMOVAL
 			if (isRT || ((!modulesToEnable[0] && isQT) || (!modulesToEnable[1] && isThread)) ) {
 				//TWEET IS QT, RT, OR THREAD
@@ -298,205 +276,208 @@ driver.executeScript("document.body.style.zoom='35%'");
 		//GET TWEET URL
 		mobileTweetURL = await driver.findElement(By.xpath(thisTweetXPath + tweetURLXPath)).getAttribute('href');
 		tweetURL = await mobileTweetURL.replace('mobile.','');
+		debuglog(tweetURL,2);
 
-		await driver.wait(until.elementLocated(By.xpath(timeLineXPath + tweetTextXPath)), 1000);
-			tweetHasText = await driver.findElement(webdriver.By.xpath(thisTweetXPath + tweetTextXPath)).then(function() {
-			    return true; // It existed
-			}, function(err) {
-			    if (err instanceof webdriver.error.NoSuchElementError) {
-			        return false; // It was not found
-			    } else {
-			        webdriver.promise.rejected(err);
-			    }
-			});
-		if (tweetHasText){
-				tweetText = await driver.findElement(By.xpath(thisTweetXPath + tweetTextXPath)).getText();
-				debuglog("Tweet Text: " + tweetText,2);
-			} else {
-				tweetText = " ";
-			}
+  	if (!csvOutput.includes(tweetURL)) {
 
-    	if (!csvOutput.includes(tweetURL)) {
-
-    		//SETUP TEXT FOR TWEET STATUS
+  		//SETUP TEXT FOR TWEET STATUS
 			var tweetHasText = false;
 			await driver.wait(until.elementLocated(By.xpath(timeLineXPath + tweetTextXPath)), 1000);
+
 			tweetHasText = await driver.findElement(webdriver.By.xpath(thisTweetXPath + tweetTextXPath)).then(function() {
-			    return true; // It existed
+		  	return true; // It existed
 			}, function(err) {
-			    if (err instanceof webdriver.error.NoSuchElementError) {
-			        return false; // It was not found
-			    } else {
-			        webdriver.promise.rejected(err);
-			    }
+		  	if (err instanceof webdriver.error.NoSuchElementError) {
+		  		return false; // It was not found
+		  	} else {
+		    	webdriver.promise.rejected(err);
+		    }
 			});
 			if (tweetHasText){
 				tweetText = await driver.findElement(By.xpath(thisTweetXPath + tweetTextXPath)).getText();
-				debuglog("Tweet Text: " + tweetText,2);
+				//debuglog("Tweet Text: " + tweetText,2);
 			} else {
 				tweetText = " ";
 			}
 
-			//CHECK FOR QUOTE TWEETS
-			isQT = await driver.findElement(webdriver.By.xpath(thisTweetXPath + quoteTweetContentXPath)).then(function() {
-				return true; // It existed
+			tweetHasURL = await driver.findElement(webdriver.By.xpath(thisTweetXPath + urlCardXPath)).then(function() {
+		    return true; // It existed
 			}, function(err) {
-			    if (err instanceof webdriver.error.NoSuchElementError) {
-			        return false; // It was not found
-			    } else {
-			        //webdriver.promise.rejected(err);
-			    }
+		    if (err instanceof webdriver.error.NoSuchElementError) {
+		      return false; // It was not found
+		  	} else {
+		      webdriver.promise.rejected(err);
+		    }
 			});
-			if (isQT){
-				await driver.sleep(1 * 1000)
-				quotedContent = await driver.findElement(webdriver.By.xpath(thisTweetXPath + quoteTweetContentXPath));
-				var b64img = await screenshotElement(driver, thisTweetXPath + quoteTweetContentXPath);
-				var base64Data = b64img.replace(/^data:image\/png;base64,/, "");
-				require("fs").writeFile('./' + i + "." + 0 +'.jpg', base64Data, 'base64', function(err) {
-					debuglog(err,1);
+			if (tweetHasURL){
+			tweetCardURL = await driver.findElement(By.xpath(thisTweetXPath + urlCardXPath)).getAttribute('href');
+			await expandUrl(tweetCardURL)
+				.then(function (longUrl) {
+				    debuglog("Long URL:" + longUrl,2);
+						tweetText = tweetText + "\r\n\r\n" + longUrl;
+						debuglog("Tweet Text: " + tweetText,2);
 				});
-
 			}
+					debuglog("tweetHasText: " + tweetHasText,2);
+		debuglog("tweetHasURL: " + tweetHasURL,2);
 
-			//CODE TO RUN IF TWEET IS NOT IN CSV
-			debuglog("Tweet #" + i + " has not been processed.", 1);
-
-    		//HANDLE SAVING SINGLE IMAGES
-    		var singleImageExisted = await driver.findElement(webdriver.By.xpath(thisTweetXPath + singleImageXPath)).then(function() {
-			    return true; // It existed
-			}, function(err) {
-			    if (err instanceof webdriver.error.NoSuchElementError) {
-			        return false; // It was not found
-			    } else {
-			        webdriver.promise.rejected(err);
-			    }
+		//CHECK FOR QUOTE TWEETS
+		isQT = await driver.findElement(webdriver.By.xpath(thisTweetXPath + quoteTweetContentXPath)).then(function() {
+			return true; // It existed
+		}, function(err) {
+		    if (err instanceof webdriver.error.NoSuchElementError) {
+		        return false; // It was not found
+		    } else {
+		        //webdriver.promise.rejected(err);
+		    }
+		});
+		if (isQT){
+			await driver.sleep(1 * 1000)
+			quotedContent = await driver.findElement(webdriver.By.xpath(thisTweetXPath + quoteTweetContentXPath));
+			await driver.findElement(webdriver.By.xpath(thisTweetXPath + quoteTweetContentXPath)).sendKeys(webdriver.Key.CONTROL, webdriver.Key.ENTER);
+			var parent = await driver.getWindowHandle();
+			var windows = await driver.getAllWindowHandles();
+			await driver.switchTo().window(windows[1]).then(() => {
+  			driver.getCurrentUrl().then(url => {
+  				debuglog('current url: "' + url + '"',2);
+  				tweetText = tweetText + "\r\n\r\n" + "Quote tweeting: " + url;
+  			});
+  			driver.switchTo().window(parent);
 			});
-			if (singleImageExisted) {
-				debuglog("Tweet #" + i + " contains a single image.", 2)
-				imageCount = 1;
-				imageURL = await driver.findElement(webdriver.By.xpath(thisTweetXPath + singleImageXPath)).getAttribute("src");
-				await downloadImage(imageURL, './' + i + "." + 1 +'.jpg')
-	    			.then(/*console.log*/)
-	    			.catch(console.error);
-	    		debuglog("Downloaded " + imageCount + "image from tweet #" + i + ".", 2)
-			}
+			await driver.switchTo().window(windows[1]);
+			await driver.close();
+			await driver.switchTo().window(parent);
+		}
 
-			//HANDLE SAVING MULTTIPLE IMAGES
-			var multiImageExisted = await driver.findElement(webdriver.By.xpath(thisTweetXPath + multiImageXPath)).then(function() {
-			    return true; // It existed
-			}, function(err) {
-			    if (err instanceof webdriver.error.NoSuchElementError) {
-			        return false; // It was not found
-			    } else {
-			        webdriver.promise.rejected(err);
-			    }
-			});
-			if (multiImageExisted) {
-				debuglog("Tweet #" + i + " contains multiple images.", 2)
-				imageCount = 0;
-				for (var x = 1; x < 3; x++) {
-					for (var y = 1; y < 3; y++) {
-						thisIteratExists = await driver.findElement(webdriver.By.xpath(thisTweetXPath + multiImage1XPath + x + multiImage2XPath + y + multiImage3XPath)).then(function() {
-						    return true; // It existed
-						}, function(err) {
-						    if (err instanceof webdriver.error.NoSuchElementError) {
-						        return false; // It was not found
-						    } else {
-						    	debuglog('I hope this doesnt break');
-						        //webdriver.promise.rejected(err);
-						    }
-						});
-						if (thisIteratExists) {
-							debuglog(x + "," + y + " Exists!")
-							iteratImgURL = await driver.findElement(webdriver.By.xpath(thisTweetXPath + multiImage1XPath + x + multiImage2XPath + y + multiImage3XPath)).getAttribute("src");
-							imageCount++;
-							await downloadImage(iteratImgURL, './' + i + "." + imageCount +'.jpg')
-	    						.then(/*console.log*/)
-	    						.catch(console.error);
-						}
-					}
-				}
-				debuglog("Downloaded " + imageCount + "images from tweet #" + i + ".", 2)
-			}
+		//CODE TO RUN IF TWEET IS NOT IN CSV
+		debuglog("Tweet #" + i + " has not been processed.", 1);
 
-			//HANDLE POSTING TWEETS TO MASTODON
-			if (singleImageExisted || multiImageExisted) {var imageExisted = true} else {var imageExisted = false}
-			if (imageExisted) {
-				
-				//MAKE MASTODON POST WITH IMAGES
-				debuglog("Uploading images to Mastodon...",1);
-				var imageArray = [];
+  		//HANDLE SAVING SINGLE IMAGES
+  		var singleImageExisted = await driver.findElement(webdriver.By.xpath(thisTweetXPath + singleImageXPath)).then(function() {
+		    return true; // It existed
+		}, function(err) {
+		    if (err instanceof webdriver.error.NoSuchElementError) {
+		        return false; // It was not found
+		    } else {
+		        webdriver.promise.rejected(err);
+		    }
+		});
+		if (singleImageExisted) {
+			debuglog("Tweet #" + i + " contains a single image.", 2)
+			imageCount = 1;
+			imageURL = await driver.findElement(webdriver.By.xpath(thisTweetXPath + singleImageXPath)).getAttribute("src");
+			await downloadImage(imageURL, './' + i + "." + 1 +'.jpg')
+    			.then(/*console.log*/)
+    			.catch(console.error);
+    		debuglog("Downloaded " + imageCount + "image from tweet #" + i + ".", 2)
+		}
 
-				if (isQT) {
-					await M.post('media', { file: fs.createReadStream('./' + i + '.0.jpg') }).then(resp => {
-						imageArray.push(resp.data.id);
+		//HANDLE SAVING MULTTIPLE IMAGES
+		var multiImageExisted = await driver.findElement(webdriver.By.xpath(thisTweetXPath + multiImageXPath)).then(function() {
+		    return true; // It existed
+		}, function(err) {
+		    if (err instanceof webdriver.error.NoSuchElementError) {
+		        return false; // It was not found
+		    } else {
+		        webdriver.promise.rejected(err);
+		    }
+		});
+		if (multiImageExisted) {
+			debuglog("Tweet #" + i + " contains multiple images.", 2)
+			imageCount = 0;
+			for (var x = 1; x < 3; x++) {
+				for (var y = 1; y < 3; y++) {
+					thisIteratExists = await driver.findElement(webdriver.By.xpath(thisTweetXPath + multiImage1XPath + x + multiImage2XPath + y + multiImage3XPath)).then(function() {
+					    return true; // It existed
 					}, function(err) {
-			    		if (err) {
-			        		debuglog(err,1);
-			    		}
-			    	})
-				}
-				for (var f = 1; f < (imageCount+1); f++) {
-					await M.post('media', { file: fs.createReadStream('./' + i + '.' + f + '.jpg') }).then(resp => {
-						imageArray.push(resp.data.id);
-					}, function(err) {
-			    		if (err) {
-			        		debuglog(err,1);
-			    		}
-			    	})
-				}
-				imageArray.length = 4
-				debuglog("Publishing post to Mastodon...",1);
-				await M.post('statuses', { status: tweetText, media_ids: imageArray }, (err, data) => {
-					if (err) {
-						debuglog("Post to Mastodon failed with error: " + err, 1);
-					} else {
-						//ADD TWEET TO CSV TO PREVENT FUTURE INDEXING
-						debuglog("Posting tweet #" + i + " to Mastodon succeeded!", 1);
-						writer = csvWriter({sendHeaders: false});
-						writer.pipe(fs.createWriteStream(csvFilename, {flags: 'a'}));
-						writer.write({
-					  		header1: tweetURL
-						});
-						writer.end();
+					    if (err instanceof webdriver.error.NoSuchElementError) {
+					        return false; // It was not found
+					    } else {
+					    	debuglog('I hope this doesnt break');
+					        //webdriver.promise.rejected(err);
+					    }
+					});
+					if (thisIteratExists) {
+						debuglog(x + "," + y + " Exists!")
+						iteratImgURL = await driver.findElement(webdriver.By.xpath(thisTweetXPath + multiImage1XPath + x + multiImage2XPath + y + multiImage3XPath)).getAttribute("src");
+						imageCount++;
+						await downloadImage(iteratImgURL, './' + i + "." + imageCount +'.jpg')
+    						.then(/*console.log*/)
+    						.catch(console.error);
 					}
-				})
-			} else {
-				//MAKE MASTODON POST WITHOUT IMAGES
-				debuglog("Publishing post to Mastodon...",1);
-
-				await M.post('statuses', { status: tweetText}, (err, data) => {
-					if (err) {
-						debuglog("Post to Mastodon failed with error: " + err, 1);
-					} else {
-						//ADD TWEET TO CSV TO PREVENT FUTURE PROCESSING
-						debuglog("Posting tweet #" + i + " to Mastodon succeeded!", 1);
-						writer = csvWriter({sendHeaders: false});
-						writer.pipe(fs.createWriteStream(csvFilename, {flags: 'a'}));
-						writer.write({
-					  		header1: tweetURL
-						});
-						writer.end();
-					}
-				})
+				}
 			}
+			debuglog("Downloaded " + imageCount + "images from tweet #" + i + ".", 2)
+		}
+
+		//HANDLE POSTING TWEETS TO MASTODON
+		if (singleImageExisted || multiImageExisted) {var imageExisted = true} else {var imageExisted = false}
+		if (imageExisted) {
 			
-			//REMOVE SAVED IMAGE FILES
-			debuglog("cleaning up...",1);
-			for (var j = 0; j < 5; j++) {
-				path = ("./" + i + "." + j + ".jpg");
-				try {
-			  		if (fs.existsSync(path)) {
-						fs.unlinkSync(path);
-					} else {
-						debuglog(path + " not found!",2);
-					}
-				} catch(err) {
-					console.error(err)
-				}
+			//MAKE MASTODON POST WITH IMAGES
+			debuglog("Uploading images to Mastodon...",1);
+			var imageArray = [];
+			for (var f = 1; f < (imageCount+1); f++) {
+				await M.post('media', { file: fs.createReadStream('./' + i + '.' + f + '.jpg') }).then(resp => {
+					imageArray.push(resp.data.id);
+				}, function(err) {
+		    		if (err) {
+		        		debuglog(err,1);
+		    		}
+		    	})
 			}
-
+			imageArray.length = 4
+			debuglog("Publishing post to Mastodon...",1);
+			await M.post('statuses', { status: tweetText, media_ids: imageArray }, (err, data) => {
+				if (err) {
+					debuglog("Post to Mastodon failed with error: " + err, 1);
+				} else {
+					//ADD TWEET TO CSV TO PREVENT FUTURE INDEXING
+					debuglog("Posting tweet #" + i + " to Mastodon succeeded!", 1);
+					writer = csvWriter({sendHeaders: false});
+					writer.pipe(fs.createWriteStream(csvFilename, {flags: 'a'}));
+					writer.write({
+				  		header1: tweetURL
+					});
+					writer.end();
+				}
+			})
 		} else {
+			//MAKE MASTODON POST WITHOUT IMAGES
+			debuglog("Publishing post to Mastodon...",1);
+
+			await M.post('statuses', { status: tweetText}, (err, data) => {
+				if (err) {
+					debuglog("Post to Mastodon failed with error: " + err, 1);
+				} else {
+					//ADD TWEET TO CSV TO PREVENT FUTURE PROCESSING
+					debuglog("Posting tweet #" + i + " to Mastodon succeeded!", 1);
+					writer = csvWriter({sendHeaders: false});
+					writer.pipe(fs.createWriteStream(csvFilename, {flags: 'a'}));
+					writer.write({
+				  		header1: tweetURL
+					});
+					writer.end();
+				}
+			})
+		}
+		
+		//REMOVE SAVED IMAGE FILES
+		debuglog("cleaning up...",1);
+		for (var j = 1; j < 5; j++) {
+			path = ("./" + i + "." + j + ".jpg");
+			try {
+		  		if (fs.existsSync(path)) {
+					fs.unlinkSync(path);
+				} else {
+					debuglog(path + " not found!",2);
+				}
+			} catch(err) {
+				console.error(err)
+			}
+		}
+
+	} else {
 			//CODE TO RUN IF TWEET IS IN CSV
 			debuglog("Tweet #" + i + " has already been processed.",1);
 		}
