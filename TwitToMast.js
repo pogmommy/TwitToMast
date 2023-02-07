@@ -58,9 +58,9 @@ var M = new Masto({
 var modulesToEnable = [false, false];
 for(var c = 2; c < 4; c++){
 	if (config[c] = "true"){
-		modulesToEnable[c] = true;
+		modulesToEnable[c-2] = true;
 	} else if (config[c] = "false"){
-		modulesToEnable[c] = false;
+		modulesToEnable[c-2] = false;
 	} else {
 		console.log("config.txt line " + (c+1) + ": Expected [true/false], got '" + config[c] + "' instead");
 		console.log("for help: $TwitToMast.js -h");
@@ -75,10 +75,10 @@ const userName = args[2];
 const maxTweetScan = parseInt(args[3]);
 const debug = args[4];
 if (typeof args[4] == 'undefined') {debug = 0;}
-debuglog(args);
-debuglog("userName: " + userName);
-debuglog("maxTweetScan: " + maxTweetScan);
-debuglog("debug: " + debug);
+debuglog(args,2);
+debuglog("userName: " + userName,2);
+debuglog("maxTweetScan: " + maxTweetScan,2);
+debuglog("debug: " + debug,2);
 
 //FUNCTIONS
 
@@ -152,7 +152,13 @@ function screenshotElement(driver, locator) {
     })
 }
 
-debuglog("Setting up...",1)
+debuglog("Setting up...",1);
+debuglog("userName: " + userName,1);
+debuglog("maxTweetScan: " + maxTweetScan,1);
+debuglog("debug: " + debug,1);
+debuglog("API_URL: " + config[0],1);
+debuglog("Enable Quote Tweets: " + modulesToEnable[0],1);
+debuglog("Enable Thread Tweets: " + modulesToEnable[1],1);
 
 //SETUP REMAINDER OF VARIABLES
 
@@ -292,6 +298,23 @@ driver.executeScript("document.body.style.zoom='35%'");
 		//GET TWEET URL
 		mobileTweetURL = await driver.findElement(By.xpath(thisTweetXPath + tweetURLXPath)).getAttribute('href');
 		tweetURL = await mobileTweetURL.replace('mobile.','');
+
+		await driver.wait(until.elementLocated(By.xpath(timeLineXPath + tweetTextXPath)), 1000);
+			tweetHasText = await driver.findElement(webdriver.By.xpath(thisTweetXPath + tweetTextXPath)).then(function() {
+			    return true; // It existed
+			}, function(err) {
+			    if (err instanceof webdriver.error.NoSuchElementError) {
+			        return false; // It was not found
+			    } else {
+			        webdriver.promise.rejected(err);
+			    }
+			});
+		if (tweetHasText){
+				tweetText = await driver.findElement(By.xpath(thisTweetXPath + tweetTextXPath)).getText();
+				debuglog("Tweet Text: " + tweetText,2);
+			} else {
+				tweetText = " ";
+			}
 
     	if (!csvOutput.includes(tweetURL)) {
 
