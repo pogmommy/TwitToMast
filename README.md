@@ -33,14 +33,15 @@ npm install
 ## Usage
 
 ```
-node ./TwitToMast.js [username] [tweet count] [debug level]
+node ./TwitToMast.js [username] [tweet count] [debug level] [disable posts]
 ```
-- `username`: the twitter handle of the user whose account will be scraped
-- `tweet count`: the number of enabled tweets that will be scraped from the targeted account
-- `debug level`: Level of output that will be printed on screen.
+- `username       (string)`: the twitter handle of the user whose account will be scraped
+- `tweet count    (integer)`: the number of enabled tweets that will be scraped from the targeted account
+- `debug level    (0-2)`: Level of output that will be printed on screen.
+	- 0 or omitted: the program will to run silently (no output on screen)
 	- 1: The program will print what tasks it is working on and errors, but nothing more.
 	- 2: The program will print what tasks it is working on and errors, as well as various other information necessary for troubleshooting.
-	- Omit this argument for the program to run silently (no output on screen)
+- `disable posts  ('noWrite')`: disable posting tweets to Mastodon, useful for testing
 	
 ## How Types of Tweets are handled
 
