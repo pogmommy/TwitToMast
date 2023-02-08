@@ -76,11 +76,13 @@ node ./multi.js [tweet count] [debug level] [disable posts] [print header]
 ## Q&A
 **Q.** why isn't it staying open in the background to monitor my tweets?
 **A.** TwitToMast doesn't run perpetually by default. You'll need to set it up yourself to run on a schedule.
+
 - On macos, you can run the script every 10 minutes with the following command in an automator app set up to run at login.
 	- `zsh -c "cd /path/to/repository/TwitToMast && exec screen -DmS twittercrosspost zsh -c 'while true; do /path/to/node ./TwitToMast.js [username] [tweet count] [debug level] & sleep 600; done'"`
 	- You can connect to the created screen to monitor the output of the script with `screen -ls` and `screen -r [screenid]`
 - Windows users, try [this](https://joshuatz.com/posts/2020/using-windows-task-scheduler-to-automate-nodejs-scripts/)
 - If you're on linux, you probably already know what you're doing
+
 **Q.** Doesn't bypassing Twitter's API violate their TOS?
 **A.** No, elon musk personally gave me the go-ahead to do this.
 ![Proof](https://github.com/pogmom/TwitToMast/raw/main/api_license.png)
