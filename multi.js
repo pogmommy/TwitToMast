@@ -1,5 +1,5 @@
 const args = process.argv;
-const defArgs = ["node","path","name","tweetCount","0","write","fromLoop"]
+const defArgs = ["node","path","name","tweetCount","0","write","printHeader"]
 for (var i = 0; i < 2; i++) {args.shift();}
 const config = require('fs').readFileSync("./usernameslist.txt").toString().split(/[\r\n]+/);
 for (let name of config) {
