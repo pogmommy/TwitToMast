@@ -15,12 +15,13 @@ const Q = require("q");
 
 const args = process.argv;
 if (args[2] == "-h"){
-	console.log("usage: $node ./TwitToMast.js [username] [tweet count] [debug level] [disable posts]");
-	console.log("        username:       (string)              username of account to scrape - required");
-	console.log("        tweet count:    (integer)             number of tweets to scrape - required");
-	console.log("        debug level:    (0-2)                 amount of information to print to console - defaults to 0");
-	console.log("        disable posts:  ('write','noWrite')   enable/disable posting to Mastodon - defaults to enable");
-	console.log("        ");
+	console.log("usage: $node ./TwitToMast.js [username] [tweet count] [debug level] [disable posts] [print header]");
+	console.log("        username:       (string)              -username of account to scrape - required");
+	console.log("        tweet count:    (integer)             -number of tweets to scrape - required");
+	console.log("        debug level:    (0-2)                 -amount of information to print to console - 0 by default");
+	console.log("        disable posts:  ('write','noWrite')   -enable/disable posting to Mastodon - disabled by default");
+	console.log("        print header:   ('printHeader')       -enable attaching a header with the user's name, twitter");
+	console.log("                                               handle, and link to tweet - disabled by default");
 	console.log("        config.txt:");
 	console.log("        API_KEY");
 	console.log("        API_URL");
@@ -87,11 +88,11 @@ if (typeof args[5] == 'undefined') {
 } else if (args[5] == 'noWrite') {
 	disablePosts = true;
 }
-var fromLoop = false;
-if (args[6] == 'fromLoop'){
-	fromLoop = true;
+var printHeader = false;
+if (args[6] == 'printHeader'){
+	printHeader = true;
 } else {
-	fromLoop = false;
+	printHeader = false;
 }
 debuglog(args,2);
 debuglog("userName: " + userName,2);
@@ -154,11 +155,16 @@ debuglog("API_URL: " + config[1],1);
 debuglog("Enable Quote Tweets: " + modulesToEnable[0],1);
 debuglog("Enable Thread Tweets: " + modulesToEnable[1],1);
 debuglog("Disable posting to Mastodon: " + disablePosts,1);
-debuglog("running from loop: " + fromLoop,1);
+debuglog("running from loop: " + printHeader,1);
 
 //SETUP REMAINDER OF VARIABLES
 
 const csvFilename = "./URLList.csv";
+const localDir = './';
+const imgSavePath = (localDir + userName + '/');
+if (!fs.existsSync(imgSavePath)){
+    fs.mkdirSync(imgSavePath);
+}
 
 //XPATH CONSTANTS
 
@@ -312,7 +318,7 @@ driver.executeScript("document.body.style.zoom='35%'");
 		tweetText = ""
 
 		//IS TWEET PART OF MULTISCRAPER, IF SO ADD HEADER
-		if (fromLoop) {
+		if (printHeader) {
 			tweeterHandleText = await driver.findElement(By.xpath(thisTweetXPath + tweeterHandle)).getText();
 			tweeterNameText = await driver.findElement(By.xpath(thisTweetXPath + tweeterName)).getText();
 			tweetText = (tweeterNameText + " (" + tweeterHandleText + ")\r\n" + tweetURL + "\r\n\r\n")
@@ -401,7 +407,7 @@ driver.executeScript("document.body.style.zoom='35%'");
 			debuglog("Tweet #" + i + " contains a single image.", 2)
 			imageCount = 1;
 			imageURL = await driver.findElement(webdriver.By.xpath(thisTweetXPath + singleImageXPath)).getAttribute("src");
-			await downloadImage(imageURL, './' + i + "." + 1 +'.jpg')
+			await downloadImage(imageURL, imgSavePath + i + "." + 1 +'.jpg')
     			.then(/*console.log*/)
     			.catch(console.error);
     		debuglog("Downloaded " + imageCount + "image from tweet #" + i + ".", 2)
@@ -436,7 +442,7 @@ driver.executeScript("document.body.style.zoom='35%'");
 						debuglog(x + "," + y + " Exists!")
 						iteratImgURL = await driver.findElement(webdriver.By.xpath(thisTweetXPath + multiImage1XPath + x + multiImage2XPath + y + multiImage3XPath)).getAttribute("src");
 						imageCount++;
-						await downloadImage(iteratImgURL, './' + i + "." + imageCount +'.jpg')
+						await downloadImage(iteratImgURL, imgSavePath + i + "." + imageCount +'.jpg')
     						.then(/*console.log*/)
     						.catch(console.error);
 					}
@@ -454,7 +460,7 @@ driver.executeScript("document.body.style.zoom='35%'");
 				debuglog("Uploading images to Mastodon...",1);
 				var imageArray = [];
 				for (var f = 1; f < (imageCount+1); f++) {
-					await M.post('media', { file: fs.createReadStream('./' + i + '.' + f + '.jpg') }).then(resp => {
+					await M.post('media', { file: fs.createReadStream(imgSavePath + i + '.' + f + '.jpg') }).then(resp => {
 						imageArray.push(resp.data.id);
 					}, function(err) {
 			    		if (err) {
@@ -498,21 +504,6 @@ driver.executeScript("document.body.style.zoom='35%'");
 				})
 			}
 		}
-		
-		//REMOVE SAVED IMAGE FILES
-		debuglog("Cleaning up...",1);
-		for (var j = 1; j < 5; j++) {
-			path = ("./" + i + "." + j + ".jpg");
-			try {
-		  		if (fs.existsSync(path)) {
-					fs.unlinkSync(path);
-				} else {
-					debuglog(path + " not found!",2);
-				}
-			} catch(err) {
-				console.error(err)
-			}
-		}
 
 	} else {
 			//CODE TO RUN IF TWEET IS IN CSV
@@ -522,6 +513,11 @@ driver.executeScript("document.body.style.zoom='35%'");
 		if (i < maxTweetScan) {driver.executeScript('var element = document.evaluate(`' + thisTweetXPath + '`,document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null ).singleNodeValue.remove();');}
     	
 	}
+	//REMOVE SAVED IMAGE FILES
+		debuglog("Cleaning up...",1);
+		fs.rm(imgSavePath, { recursive: true, force: true }, (error) => {
+    		//you can handle the error here
+		});
 
 	debuglog("Finished scraping " + userName + "'s tweets",1)
     //EXIT WEBDRIVER
