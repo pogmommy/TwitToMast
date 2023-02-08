@@ -15,10 +15,11 @@ const Q = require("q");
 
 const args = process.argv;
 if (args[2] == "-h"){
-	console.log("usage: $TwitToMast.js [username] [tweet count] [debug level]");
-	console.log("        username: string");
-	console.log("        tweet count: integer");
-	console.log("        debug level: 1,2 (omit for no output)");
+	console.log("usage: $node ./TwitToMast.js [username] [tweet count] [debug level] [disable posts]");
+	console.log("        username:       (string)      username of account to scrape");
+	console.log("        tweet count:    (integer)     number of tweets to scrape");
+	console.log("        debug level:    (0-2)         amount of information to print to console");
+	console.log("        disable posts:  ('noWrite')   disable posting to Mastodon");
 	console.log("        ");
 	console.log("        config.txt:");
 	console.log("        API_KEY");
@@ -42,8 +43,13 @@ if (isNaN(parseInt(args[3]))){
 	console.log("for help: $TwitToMast.js -h");
 	process.exit(1);
 }
-if (((args[4] != 1) && (args[4] != 2)) && (typeof args[4] != 'undefined')){
-	console.log("Expected [1/2], got '" + args[4] + "' instead");
+if (!((args[4] >= 0) && (args[4] <= 2)) && (typeof args[4] != 'undefined')){
+	console.log("Expected [0-2], got '" + args[4] + "' instead");
+	console.log("for help: $TwitToMast.js -h");
+	process.exit(1);
+}
+if (args[5] != 'noWrite' && typeof args[5] != 'undefined') {
+	console.log("Expected 'noWrite' or undefined, got '" + args[5] + "' instead");
 	console.log("for help: $TwitToMast.js -h");
 	process.exit(1);
 }
@@ -75,10 +81,17 @@ const userName = args[2];
 const maxTweetScan = parseInt(args[3]);
 const debug = args[4];
 if (typeof args[4] == 'undefined') {debug = 0;}
+var disablePosts = false;
+if (typeof args[5] == 'undefined') {
+	disablePosts = false;
+} else if (args[5] == 'noWrite') {
+	disablePosts = true;
+}
 debuglog(args,2);
 debuglog("userName: " + userName,2);
 debuglog("maxTweetScan: " + maxTweetScan,2);
 debuglog("debug: " + debug,2);
+debuglog("disable posts: " + disablePosts,2);
 
 //FUNCTIONS
 
@@ -134,6 +147,7 @@ debuglog("debug: " + debug,1);
 debuglog("API_URL: " + config[1],1);
 debuglog("Enable Quote Tweets: " + modulesToEnable[0],1);
 debuglog("Enable Thread Tweets: " + modulesToEnable[1],1);
+debuglog("Disable posting to Mastodon: " + disablePosts,1);
 
 //SETUP REMAINDER OF VARIABLES
 
@@ -411,55 +425,57 @@ driver.executeScript("document.body.style.zoom='35%'");
 		}
 
 		//HANDLE POSTING TWEETS TO MASTODON
-		if (singleImageExisted || multiImageExisted) {var imageExisted = true} else {var imageExisted = false}
-		if (imageExisted) {
+		if (!disablePosts){
+			if (singleImageExisted || multiImageExisted) {var imageExisted = true} else {var imageExisted = false}
+			if (imageExisted) {
+				
+				//MAKE MASTODON POST WITH IMAGES
+				debuglog("Uploading images to Mastodon...",1);
+				var imageArray = [];
+				for (var f = 1; f < (imageCount+1); f++) {
+					await M.post('media', { file: fs.createReadStream('./' + i + '.' + f + '.jpg') }).then(resp => {
+						imageArray.push(resp.data.id);
+					}, function(err) {
+			    		if (err) {
+			        		debuglog(err,1);
+			    		}
+			    	})
+				}
+				imageArray.length = 4
+				debuglog("Publishing post to Mastodon...",1);
+				await M.post('statuses', { status: tweetText, media_ids: imageArray }, (err, data) => {
+					if (err) {
+						debuglog("Post to Mastodon failed with error: " + err, 1);
+					} else {
+						//ADD TWEET TO CSV TO PREVENT FUTURE INDEXING
+						debuglog("Posting tweet #" + i + " to Mastodon succeeded!", 1);
+						writer = csvWriter({sendHeaders: false});
+						writer.pipe(fs.createWriteStream(csvFilename, {flags: 'a'}));
+						writer.write({
+					  		header1: tweetURL
+						});
+						writer.end();
+					}
+				})
+			} else {
+				//MAKE MASTODON POST WITHOUT IMAGES
+				debuglog("Publishing post to Mastodon...",1);
 			
-			//MAKE MASTODON POST WITH IMAGES
-			debuglog("Uploading images to Mastodon...",1);
-			var imageArray = [];
-			for (var f = 1; f < (imageCount+1); f++) {
-				await M.post('media', { file: fs.createReadStream('./' + i + '.' + f + '.jpg') }).then(resp => {
-					imageArray.push(resp.data.id);
-				}, function(err) {
-		    		if (err) {
-		        		debuglog(err,1);
-		    		}
-		    	})
+				await M.post('statuses', { status: tweetText}, (err, data) => {
+					if (err) {
+						debuglog("Post to Mastodon failed with error: " + err, 1);
+					} else {
+						//ADD TWEET TO CSV TO PREVENT FUTURE PROCESSING
+						debuglog("Posting tweet #" + i + " to Mastodon succeeded!", 1);
+						writer = csvWriter({sendHeaders: false});
+						writer.pipe(fs.createWriteStream(csvFilename, {flags: 'a'}));
+						writer.write({
+					  		header1: tweetURL
+						});
+						writer.end();
+					}
+				})
 			}
-			imageArray.length = 4
-			debuglog("Publishing post to Mastodon...",1);
-			await M.post('statuses', { status: tweetText, media_ids: imageArray }, (err, data) => {
-				if (err) {
-					debuglog("Post to Mastodon failed with error: " + err, 1);
-				} else {
-					//ADD TWEET TO CSV TO PREVENT FUTURE INDEXING
-					debuglog("Posting tweet #" + i + " to Mastodon succeeded!", 1);
-					writer = csvWriter({sendHeaders: false});
-					writer.pipe(fs.createWriteStream(csvFilename, {flags: 'a'}));
-					writer.write({
-				  		header1: tweetURL
-					});
-					writer.end();
-				}
-			})
-		} else {
-			//MAKE MASTODON POST WITHOUT IMAGES
-			debuglog("Publishing post to Mastodon...",1);
-
-			await M.post('statuses', { status: tweetText}, (err, data) => {
-				if (err) {
-					debuglog("Post to Mastodon failed with error: " + err, 1);
-				} else {
-					//ADD TWEET TO CSV TO PREVENT FUTURE PROCESSING
-					debuglog("Posting tweet #" + i + " to Mastodon succeeded!", 1);
-					writer = csvWriter({sendHeaders: false});
-					writer.pipe(fs.createWriteStream(csvFilename, {flags: 'a'}));
-					writer.write({
-				  		header1: tweetURL
-					});
-					writer.end();
-				}
-			})
 		}
 		
 		//REMOVE SAVED IMAGE FILES
