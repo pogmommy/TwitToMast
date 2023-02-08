@@ -184,7 +184,7 @@ const threadIndicatorXPath = `/div/div/div/article/div/a/div/div[2]/div/span`; /
 
 const tweetTextXPath = `//div[@data-testid="tweetText"]`; //xpath that leads to div containing all tweet text
 
-const tweetURLXPath = `//div/a[contains(@href, 'status')]`; //xpath to tweet url
+const tweetURLXPath = `//div[3]/a[contains(@href, 'status')]`; //xpath to tweet url
 
 const singleImageXPath = `//div[2]/div/img[@alt="Image"]`; //xpath to image that reveals if a tweet has one image
 
