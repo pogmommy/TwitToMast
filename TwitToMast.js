@@ -16,10 +16,10 @@ const Q = require("q");
 const args = process.argv;
 if (args[2] == "-h"){
 	console.log("usage: $node ./TwitToMast.js [username] [tweet count] [debug level] [disable posts]");
-	console.log("        username:       (string)      username of account to scrape");
-	console.log("        tweet count:    (integer)     number of tweets to scrape");
-	console.log("        debug level:    (0-2)         amount of information to print to console");
-	console.log("        disable posts:  ('noWrite')   disable posting to Mastodon");
+	console.log("        username:       (string)              username of account to scrape - required");
+	console.log("        tweet count:    (integer)             number of tweets to scrape - required");
+	console.log("        debug level:    (0-2)                 amount of information to print to console - defaults to 0");
+	console.log("        disable posts:  ('write','noWrite')   enable/disable posting to Mastodon - defaults to enable");
 	console.log("        ");
 	console.log("        config.txt:");
 	console.log("        API_KEY");
@@ -43,13 +43,13 @@ if (isNaN(parseInt(args[3]))){
 	console.log("for help: $TwitToMast.js -h");
 	process.exit(1);
 }
-if (!((args[4] >= 0) && (args[4] <= 2)) && (typeof args[4] != 'undefined')){
+if (!((parseInt(args[4]) >= 0) && (parseInt(args[4]) <= 2)) && (typeof args[4] != 'undefined')){
 	console.log("Expected [0-2], got '" + args[4] + "' instead");
 	console.log("for help: $TwitToMast.js -h");
 	process.exit(1);
 }
-if (args[5] != 'noWrite' && typeof args[5] != 'undefined') {
-	console.log("Expected 'noWrite' or undefined, got '" + args[5] + "' instead");
+if ((args[5] != 'noWrite' && args[5] != 'write') && typeof args[5] != 'undefined') {
+	console.log("Expected 'noWrite', 'write', or undefined, got '" + args[5] + "' instead");
 	console.log("for help: $TwitToMast.js -h");
 	process.exit(1);
 }
@@ -87,6 +87,12 @@ if (typeof args[5] == 'undefined') {
 } else if (args[5] == 'noWrite') {
 	disablePosts = true;
 }
+var fromLoop = false;
+if (args[6] == 'fromLoop'){
+	fromLoop = true;
+} else {
+	fromLoop = false;
+}
 debuglog(args,2);
 debuglog("userName: " + userName,2);
 debuglog("maxTweetScan: " + maxTweetScan,2);
@@ -113,7 +119,7 @@ function downloadImage(url, filepath) {
 
 function debuglog(debugString,logLevel) {
 	prefix = "";
-	switch (debug) {
+	switch (logLevel) {
 		case 0:
     		prefix = "";
     		break;
@@ -124,7 +130,7 @@ function debuglog(debugString,logLevel) {
      		prefix = "!";
     		break;
 	}
-		if (logLevel <= debug) {console.log(prefix + " " + debugString);}
+	if (logLevel <= debug) {console.log(prefix + " " + debugString);}
 }
 
 function expandUrl(shortUrl) {
@@ -148,6 +154,7 @@ debuglog("API_URL: " + config[1],1);
 debuglog("Enable Quote Tweets: " + modulesToEnable[0],1);
 debuglog("Enable Thread Tweets: " + modulesToEnable[1],1);
 debuglog("Disable posting to Mastodon: " + disablePosts,1);
+debuglog("running from loop: " + fromLoop,1);
 
 //SETUP REMAINDER OF VARIABLES
 
@@ -163,6 +170,10 @@ const tweetXPath = (timeLineXPath + `/div`); //the div containing individual twe
 
 const urlCardXPath = `/div/div/div/article/div/div/div/div[*]/div[*]/div[*]/div[*]/div/div[2]/a`
 
+const tweeterHandle = `/div/div/div/article/div/div/div/div[2]/div[2]/div[1]/div/div/div[1]/div/div/div[2]/div/div[1]/a/div/span[contains(text(),"@")]` //text label containing tweeter's handle
+
+const tweeterName = `/div/div/div/article/div/div/div/div[2]/div[2]/div[1]/div/div/div[1]/div/div/div[1]/div/a/div/div[1]/span/span` //text label containing tweeter's name
+
 const quoteTweetHandleXPath = `/div/div/div/article/div/div/div/div[2]/div[2]/div[2]/div[2]/div[*]/div[2]/div/div[1]/div/div/div/div/div/div[2]/div[1]/div/div/div/span`; //xpath to text label that reveals if a tweet is a quote tweet (leads to the quote tweeted user's handle)
 
 const quoteTweetContentXPath= `/div/div/div/article/div/div/div/div[2]/div[2]/div[2]/div[2]/div[*]/div[2][div/div[1]/div/div/div/div/div/div[2]/div[1]/div/div/div/span]` //xpath to locate entirety of Quote Tweeted Content
@@ -173,7 +184,7 @@ const threadIndicatorXPath = `/div/div/div/article/div/a/div/div[2]/div/span`; /
 
 const tweetTextXPath = `//div[@data-testid="tweetText"]`; //xpath that leads to div containing all tweet text
 
-const tweetURLXPath = `//div/a[contains(@href, 'status')]`; //xpath to image that reveals if a tweet is a part of a thread
+const tweetURLXPath = `//div/a[contains(@href, 'status')]`; //xpath to tweet url
 
 const singleImageXPath = `//div[2]/div/img[@alt="Image"]`; //xpath to image that reveals if a tweet has one image
 
@@ -288,6 +299,7 @@ driver.executeScript("document.body.style.zoom='35%'");
 		}
 
 		//GET TWEET URL
+		await driver.wait(until.elementLocated(By.xpath(thisTweetXPath + tweetURLXPath)), 1000);
 		mobileTweetURL = await driver.findElement(By.xpath(thisTweetXPath + tweetURLXPath)).getAttribute('href');
 		tweetURL = await mobileTweetURL.replace('mobile.','');
 		debuglog(tweetURL,2);
@@ -295,47 +307,53 @@ driver.executeScript("document.body.style.zoom='35%'");
   	if (!csvOutput.includes(tweetURL)) {
 
   		//SETUP TEXT FOR TWEET STATUS
-			var tweetHasText = false;
-			await driver.wait(until.elementLocated(By.xpath(timeLineXPath + tweetTextXPath)), 1000);
+		var tweetHasText = false;
+		await driver.wait(until.elementLocated(By.xpath(timeLineXPath + tweetTextXPath)), 1000);
+		tweetText = ""
 
-			tweetHasText = await driver.findElement(webdriver.By.xpath(thisTweetXPath + tweetTextXPath)).then(function() {
-		  	return true; // It existed
-			}, function(err) {
-		  	if (err instanceof webdriver.error.NoSuchElementError) {
-		  		return false; // It was not found
-		  	} else {
-		    	webdriver.promise.rejected(err);
-		    }
+		//IS TWEET PART OF MULTISCRAPER, IF SO ADD HEADER
+		if (fromLoop) {
+			tweeterHandleText = await driver.findElement(By.xpath(thisTweetXPath + tweeterHandle)).getText();
+			tweeterNameText = await driver.findElement(By.xpath(thisTweetXPath + tweeterName)).getText();
+			tweetText = (tweeterNameText + " (" + tweeterHandleText + ")\r\n" + tweetURL + "\r\n\r\n")
+		}
+
+		//DOES TWEET HAVE TEXT
+		tweetHasText = await driver.findElement(webdriver.By.xpath(thisTweetXPath + tweetTextXPath)).then(function() {
+	  	return true; // It existed
+		}, function(err) {
+	  	if (err instanceof webdriver.error.NoSuchElementError) {
+	  		return false; // It was not found
+	  	} else {
+	    	webdriver.promise.rejected(err);
+	    }
+		});
+		//IF SO, ADD BODY TEXT TO TWEET TEXT
+		if (tweetHasText){
+			tweetText = tweetText + await driver.findElement(By.xpath(thisTweetXPath + tweetTextXPath)).getText();
+		}
+
+		//DOES TWEET HAVE A URL CARD
+		tweetHasURL = await driver.findElement(webdriver.By.xpath(thisTweetXPath + urlCardXPath)).then(function() {
+	    return true; // It existed
+		}, function(err) {
+	    if (err instanceof webdriver.error.NoSuchElementError) {
+	      return false; // It was not found
+	  	} else {
+	      webdriver.promise.rejected(err);
+	    }
+		});
+		//IF SO, ADD URL TO TWEET TEXT
+		if (tweetHasURL){
+		tweetCardURL = await driver.findElement(By.xpath(thisTweetXPath + urlCardXPath)).getAttribute('href');
+		await expandUrl(tweetCardURL)
+			.then(function (longUrl) {
+			    debuglog("Long URL:" + longUrl,2);
+					tweetText = tweetText + "\r\n\r\n" + longUrl;
 			});
-			if (tweetHasText){
-				tweetText = await driver.findElement(By.xpath(thisTweetXPath + tweetTextXPath)).getText();
-				//debuglog("Tweet Text: " + tweetText,2);
-			} else {
-				tweetText = " ";
-			}
+		}
 
-			tweetHasURL = await driver.findElement(webdriver.By.xpath(thisTweetXPath + urlCardXPath)).then(function() {
-		    return true; // It existed
-			}, function(err) {
-		    if (err instanceof webdriver.error.NoSuchElementError) {
-		      return false; // It was not found
-		  	} else {
-		      webdriver.promise.rejected(err);
-		    }
-			});
-			if (tweetHasURL){
-			tweetCardURL = await driver.findElement(By.xpath(thisTweetXPath + urlCardXPath)).getAttribute('href');
-			await expandUrl(tweetCardURL)
-				.then(function (longUrl) {
-				    debuglog("Long URL:" + longUrl,2);
-						tweetText = tweetText + "\r\n\r\n" + longUrl;
-						debuglog("Tweet Text: " + tweetText,2);
-				});
-			}
-					debuglog("tweetHasText: " + tweetHasText,2);
-		debuglog("tweetHasURL: " + tweetHasURL,2);
-
-		//CHECK FOR QUOTE TWEETS
+		//IS TWEET A QUOTE TWEET
 		isQT = await driver.findElement(webdriver.By.xpath(thisTweetXPath + quoteTweetContentXPath)).then(function() {
 			return true; // It existed
 		}, function(err) {
@@ -345,6 +363,7 @@ driver.executeScript("document.body.style.zoom='35%'");
 		        //webdriver.promise.rejected(err);
 		    }
 		});
+		//IF SO, ADD QUOTE TWEET LINK TO TWEET TEXT
 		if (isQT){
 			await driver.sleep(1 * 1000)
 			quotedContent = await driver.findElement(webdriver.By.xpath(thisTweetXPath + quoteTweetContentXPath));
@@ -362,6 +381,8 @@ driver.executeScript("document.body.style.zoom='35%'");
 			await driver.close();
 			await driver.switchTo().window(parent);
 		}
+
+		debuglog(tweetText,1)
 
 		//CODE TO RUN IF TWEET IS NOT IN CSV
 		debuglog("Tweet #" + i + " has not been processed.", 1);
@@ -479,7 +500,7 @@ driver.executeScript("document.body.style.zoom='35%'");
 		}
 		
 		//REMOVE SAVED IMAGE FILES
-		debuglog("cleaning up...",1);
+		debuglog("Cleaning up...",1);
 		for (var j = 1; j < 5; j++) {
 			path = ("./" + i + "." + j + ".jpg");
 			try {
@@ -502,6 +523,7 @@ driver.executeScript("document.body.style.zoom='35%'");
     	
 	}
 
+	debuglog("Finished scraping " + userName + "'s tweets",1)
     //EXIT WEBDRIVER
 	driver.quit();
 }());
