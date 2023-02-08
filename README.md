@@ -32,17 +32,33 @@ npm install
 	
 ## Usage
 
+### Single User Scraper
+
 ```
-node ./TwitToMast.js [username] [tweet count] [debug level] [disable posts]
+node ./TwitToMast.js [username] [tweet count] [debug level] [disable posts] [print header]
 ```
 - `username       (string)`: the twitter handle of the user whose account will be scraped
 - `tweet count    (integer)`: the number of enabled tweets that will be scraped from the targeted account
-- `debug level    (0-2)`: Level of output that will be printed on screen.
+- `debug level    (0-2)`: Level of output that will be printed on screen
 	- 0 or omitted: the program will to run silently (no output on screen)
-	- 1: The program will print what tasks it is working on and errors, but nothing more.
-	- 2: The program will print what tasks it is working on and errors, as well as various other information necessary for troubleshooting.
-- `disable posts  ('noWrite')`: disable posting tweets to Mastodon, useful for testing
+	- 1: The program will print what tasks it is working on and errors, but nothing more
+	- 2: The program will print what tasks it is working on and errors, as well as various other information necessary for troubleshooting
+- `disable posts  ('write','noWrite')`: enable/disable posting tweets to Mastodon, useful for testing
+- `print header   ('printHeader')`: enable attaching a header with the user's name, twitter handle, and link to tweet
+
+[Example](https://tech.lgbt/@pogmommy)
 	
+### Multi User Scraper
+
+Configure twitter accounts to be scraped in `usernameslist.txt` before running the script
+```
+node ./multi.js [tweet count] [debug level] [disable posts] [print header]
+```
+- Arguments have the same effect as listed above
+- **Note that username is NOT used in this script**
+
+[Example](https://techhub.social/@twitterscraper)
+
 ## How Types of Tweets are handled
 
 - Self Posts
