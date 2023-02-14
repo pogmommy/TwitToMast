@@ -1,4 +1,2 @@
 API_KEY
 API_URL
-true
-true
