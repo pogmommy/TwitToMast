@@ -13,6 +13,7 @@
   "author": "Pogmommy",
   "license": "ISC",
   "dependencies": {
+    "cli-color": "^2.0.3",
     "csv-write-stream": "^2.0.0",
     "filesystem": "^1.0.1",
     "https": "^1.0.0",
