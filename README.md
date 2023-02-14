@@ -22,59 +22,66 @@ npm install
 	- Replace "API_KEY" on line 1 with the Access Token you retrieved in the previous step
 	- Replace "API_URL" on line 2 with your Mastodon instance's API URL
 		- This will look like "https://mastodon.social/api/v1/", replacing "mastodon.social" with the domain you registered your account through
-	- Line 3 determines whether or not quote tweets will be sent to Mastodon
-		- true: Quote tweets will be sent to Mastodon
-		- false: Quote tweets will not be sent to Mastodon
-	- Line 4 determines whether or not tweets that are part of threads will be sent to Mastodon
-		- true: Thread tweets will be sent to Mastodon
-		- false: Thread tweets will not be sent to Mastodon
-	- While they can be independently configured, it's recommended that Lines 3 and 4 are set to the same value
 	
 ## Usage
 
-### Single User Scraper
+```
+node ./TwitToMast.js [-htqrpmbc] [-u username] [-n tweetcount] [-d debuglevel] [-w timeout]
+node ./multi.js [-htqrpmbc] [-n tweetcount] [-d debuglevel] [-w timeout]
+```
+
+## Arguments
 
 ```
-node ./TwitToMast.js [username] [tweet count] [debug level] [disable posts] [print header]
+	-h:	- show help screen (you made it here!)
+	-u: username
+		- the twitter handle of the user whose account will be scraped
+			- defaults to 'Twitter' (@twitter)
+	-n: tweetcount
+		- the number of enabled tweets that will be scraped from the targeted account
+			- defaults to 5
+	-t:	- tweets that are part of threads will be included in the scan
+	-q:	- quote tweets will be included in the scan
+	-r:	- Link to quoted tweet will appear in the header, preceded by "re: "
+			- default behavior posts link at bottom preceded by "Quoting "
+	-p:	- enable/disable posting to Mastodon
+	-m:	- include user's name, handle, and link to tweet
+	-b:	- display browser (disable headless mode)
+	-c:	- force URL to be logged to file if posts are disabled
+	-d: debuglevel
+		- amount of information to print to console
+			0: only errors
+			1: current task + tweet Text (default)
+			2: pretty much everything
+	-w: timeout
+		- length of time (in ms) to wait for page elements to load
+			- defaults to 30000 (30 seconds)
 ```
-- `username       (string)`: the twitter handle of the user whose account will be scraped
-- `tweet count    (integer)`: the number of enabled tweets that will be scraped from the targeted account
-- `debug level    (0-2)`: Level of output that will be printed on screen
-	- 0 or omitted: the program will to run silently (no output on screen)
-	- 1: The program will print what tasks it is working on and errors, but nothing more
-	- 2: The program will print what tasks it is working on and errors, as well as various other information necessary for troubleshooting
-- `disable posts  ('write','noWrite')`: enable/disable posting tweets to Mastodon, useful for testing
-- `print header   ('printHeader')`: enable attaching a header with the user's name, twitter handle, and link to tweet
 
-[Example](https://tech.lgbt/@pogmommy)
-	
-### Multi User Scraper
+[Example of single-user scraper](https://tech.lgbt/@pogmommy)
 
-Configure twitter accounts to be scraped in `usernameslist.txt` before running the script
-```
-node ./multi.js [tweet count] [debug level] [disable posts] [print header]
-```
-- Arguments have the same effect as listed above
-- **Note that username is NOT used in this script**
+[Example of multi-user scraper](https://techhub.social/@twitterscraper)
 
-[Example](https://techhub.social/@twitterscraper)
+## How types of content are handled
 
-## How Types of Tweets are handled
-
-- Self Posts
-	- Preserves Text, links, and still images
+- Text
+	- All text (except emojis) is currently included in cross-posts
 - Quote Tweets
-	- Preserves Text, links, still images, and link to quoted tweet
+	- Preserves text of quote tweet and allows
+- Media
+	- All still images attached to a tweet will be included in cross-posts
+	- Videos are unable to be attached to cross-posts, but a link to the original video will be included
 - Retweets
-	- Retweets are not cross-posted at the moment
+	- Retweets are not cross-posted
 - Replies
 	- To self:
-		- Preserves Text, links, still images, but loses continuity (tweets are not stitched together in threads)
+		- Preserves Text, links, still images, quoted content, and continuity (mastodon post are stitched together in threads)
 	- To others:
 		- Replies to others are not cross-posted at the moment
 	
 ## Q&A
 **Q.** why isn't it staying open in the background to monitor my tweets?
+
 **A.** TwitToMast doesn't run perpetually by default. You'll need to set it up yourself to run on a schedule.
 
 - On macos, you can run the script every 10 minutes with the following command in an automator app set up to run at login.
@@ -84,5 +91,6 @@ node ./multi.js [tweet count] [debug level] [disable posts] [print header]
 - If you're on linux, you probably already know what you're doing
 
 **Q.** Doesn't bypassing Twitter's API violate their TOS?
+
 **A.** No, elon musk personally gave me the go-ahead to do this.
 ![Proof](https://github.com/pogmom/TwitToMast/raw/main/api_license.png)
