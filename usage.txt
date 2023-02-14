@@ -1,0 +1,42 @@
+
+{Usage}
+        {node ./TwitToMast.js} [{-htqrpmbc}] [{-u} ~username~] [{-n} ~tweetcount~] [{-d} ~debuglevel~] [{-w} ~timeout~]
+        {node ./multi.js} [{-htqrpmbc}] [{-n} ~tweetcount~] [{-d} ~debuglevel~] [{-w} ~timeout~]
+ 
+{Arguments}
+        {-h:}                - show help screen (you made it here!)
+        {-u:} ~username~
+                           - the twitter handle of the user whose account will be scraped
+                             <- defaults to 'Twitter' (@twitter)>
+        {-n:} ~tweetcount~
+                           - the number of enabled tweets that will be scraped from the targeted account
+                             <- defaults to 5>
+        {-t:}                - tweets that are part of threads will be included in the scan
+        {-q:}                - quote tweets will be included in the scan
+        {-r:}                - Link to quoted tweet will appear in the header, preceded by "re: "
+                                - default behavior posts link at bottom of Mastodon post preceded by "Quoting "
+        {-p:}                - enable/disable posting to Mastodon
+        {-m:}                - include user's name, handle, and link to tweet
+        {-b:}                - display browser (disable headless mode)
+        {-c:}                - force URL to be logged to file if posts are disabled
+        {-d:} ~debuglevel~
+                           - amount of information to print to console
+                             <0: only errors>
+                             <1: current task + tweet Text (default)>
+                             <2: pretty much everything>
+        {-w:} ~timeout~
+                           - length of time (in ms) to wait for page elements to load
+                             <- defaults to 30000 (30 seconds)>
+ 
+{config.txt}
+        {Line 1: API_KEY}
+                           - Your Access Token obtained from Mastodon > Preferences > Development > Application
+        {Line 2: API_URL}
+                           - https://~your mastodon server url~/api/v1/
+ 
+{Examples}
+        {Scrape 10 most recent tweets, quote tweets, and thread tweets from @twitter account, and post to Mastodon}
+                           $node ./TwitToMast.js -qtp -u twitter -n 10
+        {Scrape 10 most recent tweets, quote tweets, and thread tweets from accounts listed in usernameslist.txt, and post to Mastodon}
+                           $node ./multi.js -qtp -n 10
+ 
