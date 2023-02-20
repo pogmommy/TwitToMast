@@ -60,7 +60,7 @@ node ./multi.js [-htqrpmbc] [-n tweetcount] [-d debuglevel] [-w timeout]
 
 [Example of single-user scraper](https://tech.lgbt/@pogmommy)
 
-[Example of multi-user scraper](https://techhub.social/@twitterscraper)
+[Example of multi-user scraper](https://techhub.social/@twitterscraper) (now inactive)
 
 ## How types of content are handled
 
