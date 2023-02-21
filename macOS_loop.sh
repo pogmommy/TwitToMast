@@ -7,6 +7,6 @@ then
 fi
 echo 'running script...' >> ./output/output.txt
 /bin/date >> ./output/output.txt
-/usr/local/bin/node ./TwitToMast.js -tqp -u pogmommy -n 10 >> ./output/output.txt
+/usr/local/bin/node ./TwitToMast.js -[arguments] -u [username] -n [tweetcount] >> ./output/output.txt
 /usr/bin/pkill Chrome
 /usr/bin/killall node
