@@ -84,10 +84,9 @@ node ./multi.js [-htqrpmbc] [-n tweetcount] [-d debuglevel] [-w timeout]
 
 **A.** TwitToMast doesn't run perpetually by default. You'll need to set it up yourself to run on a schedule.
 
-- On macos, you can run the script every 10 minutes with the following command in an automator app set up to run at login.
-	- `zsh -c "cd /path/to/repository/TwitToMast && exec screen -DmS twittercrosspost zsh -c 'while true; do /path/to/node ./TwitToMast.js [username] [tweet count] [debug level] & sleep 600; done'"`
+- on MacOS: `macOS_loop.sh` is an included shell script that will run TwitToMast repeatedly on a 10-minute interval. You will need to edit [arguments], [username], and [tweetcount] inside the script according to your use case. This script is provided as a proof-of-concept, there are likely more optimal ways of running TwitToMast on a loop. The shell script should log the output to a file, renaming the file if it exceeds 500 lines. It will also forcibly kill Chrome and Node in the case that for some reason they remain open after the script has finished.
 	- You can connect to the created screen to monitor the output of the script with `screen -ls` and `screen -r [screenid]`
-- Windows users, try [this](https://joshuatz.com/posts/2020/using-windows-task-scheduler-to-automate-nodejs-scripts/)
+- On Windows: try [this](https://joshuatz.com/posts/2020/using-windows-task-scheduler-to-automate-nodejs-scripts/)
 - If you're on linux, you probably already know what you're doing
 
 **Q.** Doesn't bypassing Twitter's API violate their TOS?
