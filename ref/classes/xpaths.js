@@ -22,7 +22,7 @@ class TweetPaths {
 		this.tweetText = `${this.path}//div[@data-testid='tweetText']`; //xpath that leads to div containing all tweet text
 		//this.emoji = this.path + "//img"; //xpath that leads to div containing all tweet text
 		this.tweetURL = `${this.path}//div[3]/a[contains(@href, 'status')]`; //xpath to tweet url
-		this.video = `${this.path}//div[1]//video`; //xpath that leads to video
+		this.video = `${this.path}/div/div/div/article/div/div/div/div[*]/div[*]/div[*]/div[*]/div[1]/div[1]//video`; //xpath that leads to videos that are not parts of quoted content
 		this.singleImage = `${this.path}//div[1]/div/div/div/div/a/div/div[2]/div/img[@alt='Image']`; //xpath to image that reveals if a tweet has one image
 		this.multiImage = `${this.path}//div[2]/div[2]/div[2]/div[2]/div/div/div/div/div[2]/div/div[1]/div[1]//a/div/div/img[@alt='Image']`; //xpath to image that reveals if a tweet has more than one image
 
@@ -30,7 +30,7 @@ class TweetPaths {
 			this.detectThread = `${this.path}/div/div/div/article/div/a/div/div[2]/div/span`; //xpath to text label that reveals if a tweet is a part of a thread from home timeline
 			this.detectRT = `${this.path}/div/div/div/article/div/div/div/div[1]/div/div/div/div/div[2]/div/div/div/a/span`; //xpath to text label that reveals if a tweet is a retweet
 		} else if (orig == 'thread'){ //thread timeline only
-			this.entryTweet = `${this.path}/div/div/div/article/div/div/div/div[3]/div[5]/div/div[1]/div/a` /*xpath that reveals if tweet is open in thread //openThreadTweetTSXPath*/ 
+			this.entryTweet = `${this.path}/div/div/div/article/div/div/div/div[3]/div[*]/div[@role='group']` /*xpath that reveals if tweet is open in thread //openThreadTweetTSXPath*/ 
 		}
 
 		//the following xpaths follow an individual tweet xpath and are used to find all images in a tweet with multiple images:  (tweetXpath + '[1]' + multiImage1XPath + x + multiImage2XPath + y + multiImage3XPath)
