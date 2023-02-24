@@ -42,7 +42,6 @@ async function postStatus(tweet,file,csvc){
 	if (args.enablePosts){
 		var M = setupMastodon();
 		params = { status: tweet.text }
-		debuglog(`${tweet.no} is a reply to ${tweet.prompt}`);
 		if (tweet.hasImages) {//POST HAS IMAGES
 			debuglog("post has images!!",2)
 			debuglog(`images array: ${tweet.imgArray}`,2)
