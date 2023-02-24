@@ -64,9 +64,11 @@ class Tweets {
 		this.iterateExists = false;
 		this.iteratePath = "";
 
-		//mastodon
+		//threading
 		this.id = 0;
 		this.prompt = 0;
+		this.prompturl = 0;
+		this.isReply = false;
 		this.posted = false;
 
 		if (orig == "thread") {
@@ -181,7 +183,7 @@ class Tweets {
 
 		if (this.hasVideo) {//IF TWEET HAS NON-POSTABLE MEDIA, APPEND FOOTER DETAILING SO
 			debuglog("running video stuff",2);
-			this.appendSection(`⚠ Original tweet had attachment(s) that couldn't be cross-posted. View it at ${homeTweet.url}`,'footer');
+			this.appendSection(`⚠ Original tweet had attachment(s) that couldn't be cross-posted. View it at ${this.url}`,'footer');
 			debuglog(`Tweet Footer: ${this.footer}`);
 		}
 	}
