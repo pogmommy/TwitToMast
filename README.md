@@ -58,7 +58,7 @@ node ./multi.js [-htqrpmbc] [-n tweetcount] [-d debuglevel] [-w timeout]
 			- defaults to 30000 (30 seconds)
 ```
 
-[Example of single-user scraper](https://tech.lgbt/@pogmommy)
+[Example of single-user scraper](https://pogmommy.gay/@pogmommy)
 
 [Example of multi-user scraper](https://techhub.social/@twitterscraper) (now inactive)
 
