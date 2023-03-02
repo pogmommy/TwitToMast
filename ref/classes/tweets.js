@@ -73,7 +73,7 @@ class Tweets {
 
 		if (orig == "thread") {
 			this.threadLength = 0;
-			this.entryIsOpen = false;
+			this.EntryNotOpen = true;
 		}
 		//xpaths of tweet & elements
 		this.x = new XPathObjects.TweetPaths(orig,i);
@@ -118,8 +118,25 @@ class Tweets {
 
 		this.isQT = await elements.doesExist(driver, this.x.quoteTweetContent);//IS TWEET A QUOTE TWEET
 		this.isThread = await elements.doesExist(driver,this.x.detectThread);//IS TWEET A PART OF THREAD
+		debuglog(`IS THREAD? ${this.isThread}`,2)
 		
+		debuglog("does retweet element exist?")
+		debuglog(await elements.doesExist(driver,this.x.detectRT))
 		this.isRT = await elements.doesExist(driver,this.x.detectRT);//CHECK FOR RETWEETS
+		if (!this.isRT) { //IF NOT A RETWEET, VERIFY USING BACKUP METHOD
+			debuglog("TWEET IS NOT A RETWEET!!",2)
+			var hasHandle = await elements.doesExist(driver,this.x.tweeterHandle); //CHECK IF TWEET HAS HANDLE
+			if (hasHandle) { //IF TWEET HAS HANDLE, CHECK IF USERNAME EXISTS IN HANDLE TEXT
+				var handle = await elements.getText(driver,this.x.tweeterHandle); //GET HANDLE TEXT
+				this.isRT = !(handle.search(new RegExp(args.userName, "i")) == 1); //IF USERNAME IS INSIDE HANDLE TEXT
+				//this.isRT = (!handle.toUpperCase().includes(args.userName.toUpperCase())); //IF USERNAME IS INSIDE HANDLE TEXT
+				debuglog(handle,2)
+				debuglog(args.userName,2)
+				debuglog((handle.search(new RegExp(args.userName, "i")) == 1))
+			}
+		} else {
+			debuglog("PRIMARY RETWEET CHECK METHOD WORKED")
+		}
 		this.isPin = await elements.doesExist(driver,this.x.pinnedTweet);//IS TWEET PINNED
 		
 		this.hasSingleImage = await elements.doesExist(driver, this.x.singleImage);//DOES TWEET HAVE SINGLE IMAGE?
@@ -160,7 +177,10 @@ class Tweets {
 		}
 
 		if (this.isQT){ //IF THREAD IS A QUOTE TWEET, GET URL AND ADD TO EITHER HEADER OR FOOTER
+			await driver.sleep(1000);
 			debuglog("running quote tweet stuff",2);
+			debuglog(await elements.getText(driver, this.x.quoteTweetContent));
+			//driver.wait(webdriver.until(ExpectedConditions.elementToBeClickable(By.xpath(this.x.quoteTweetContent))));
 			await driver.findElement(By.xpath(this.x.quoteTweetContent)).sendKeys(webdriver.Key.CONTROL, webdriver.Key.ENTER);//OPEN QUOTE TWEET IN NEW TAB
 			this.parent = await driver.getWindowHandle(); 
 			var windows = await driver.getAllWindowHandles();
@@ -197,7 +217,7 @@ class Tweets {
 			await funcs.downloadImage(this.imgUrl, jpgPath)
 				.then(debuglog)
 				.catch(console.error);
-			debuglog(`Downloaded ${this.imgCount} image from tweet #${this.no}.`, 2)
+			debuglog(`Downloaded image from tweet #${this.no} at url ${this.imgUrl}.`, 2)
 		} else if (this.hasMultiImage) {
 			debuglog(`${this.orig} Tweet #${this.no} contains multiple images.`, 2)
 			this.imgCount = 0;
@@ -213,11 +233,13 @@ class Tweets {
 						await funcs.downloadImage(this.imgUrl, jpgPath)
 							.then(debuglog)
 							.catch(console.error);
+						debuglog()
+						debuglog(`Downloaded image from tweet #${this.no} at url ${this.imgUrl}.`, 2)
 					}
 				}
 			}
-			debuglog(`Downloaded ${this.imgCount} images from tweet #${this.no}.`,1)
 		}
+			debuglog(`Downloaded ${this.imgCount} image(s) from tweet #${this.no}.`,1)
 	}
 
 	async uploadImages(imgSavePath) {
