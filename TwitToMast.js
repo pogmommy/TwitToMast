@@ -150,7 +150,6 @@ driver.executeScript("document.body.style.zoom='35%'");
 					threadTweet = new Tweets("thread", r); //RESETS ALL THREAD TWEET VARIABLES TO START FRESH
 					
 					debuglog(threadTweet.x.path,2); //PRINTS XPATH TO CURRENT ITERATE DIV
-					debuglog(await elements.getText(driver,threadTweet.x.path),2)
 					threadTweet.entryNotOpen = await elements.doesExist(driver,threadTweet.x.notEntryTweet) // CHECKS IF THE CURRENT ITERATE DIV IS THE ONE USED TO OPEN THE THREAD
 					if (threadTweet.entryNotOpen){ //CURRENT ITERATE DIV DOES NOT CONTAIN THE TWEET USED TO OPEN THE THREAD
 						

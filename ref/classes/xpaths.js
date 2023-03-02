@@ -18,7 +18,7 @@ class TweetPaths {
 		this.ageRestricted = `${this.path}//article//span[span[span[contains(text(),'Age-restricted')]]]/a[contains(@href,'notices')]`; //FIXED //xpath that reveals if tweet is age-restricted (& therefore not visible)
 		this.pinnedTweet = `${this.path}//article//div[@data-testid='socialContext']/span[contains(text(),'Pinned')]`; //FIXED /*//xpath that reveals if tweet is pinned*/ 
 		
-		this.tweetText = `${this.path}//article//div[@data-testid='tweetText']`; //xpath that leads to div containing all tweet text //FIXED
+		this.tweetText = `${this.path}//article//div[div/div/div/div/div[@data-testid='User-Names']]/div[2]`; //xpath that leads to div containing all tweet text //FIXED
 		this.urlCard = `${this.path}//article//a[div[contains(@data-testid,'card')]]` //FIXED
 		//this.emoji = this.path + "//img"; //xpath that leads to div containing all tweet text
 		this.tweetURL = `${this.path}//article//div[@data-testid='User-Names']//div[3]//a[contains(@href,'status')]`; //xpath to tweet url //FIXED
