@@ -74,7 +74,7 @@ driver.executeScript("document.body.style.zoom='35%'");
 	var processedTweets = [];//DEFINE ARRAY THAT WILL BE POPULATED WITH TWEETS PROCESSED DURING THIS SESSION
 	var allTweetsArray = [];//INITIALIZE THE POST QUEUE
 	for (var t = 1; t < (parseInt(args.tweetCount) + 1); t++) {//LOOP THE NUMBER OF TIMES SPECIFIED IN ARGS
-		
+
 		debuglog(format.notice(`Processing tweet #${t} of ${args.tweetCount}...`),1);
 		var homeTweet = new Tweets("home",t); //RESET HOME TWEET FOR PROCESSING
 		var threadTweet = new Tweets("thread",1); //RESET HOME TWEET FOR PROCESSING
@@ -85,13 +85,23 @@ driver.executeScript("document.body.style.zoom='35%'");
 		//REMOVE NON-PRIMARY TWEETS
 		debuglog("Filtering out disabled tweets...",2)
 		while (!homeTweet.keep) {
+			await elements.waitFor(driver,homeTweet.x.tweetURL,args.timeOut); //WAIT FOR TIMELINE TO POPULATE ITSELF WITH TWEETS
+			var stupidPromptExists = await elements.doesExist(driver,"/html//div[@data-testid='sheetDialog']//div[@data-testid='app-bar-close']"); //CHECK IF NOTIFICATION SCREEN APPEARS
+			if (stupidPromptExists) {
+				var stupidPrompt = await elements.getElement(driver,"/html//div[@data-testid='sheetDialog']//div[@data-testid='app-bar-close']");
+				await driver.executeScript("arguments[0].click();", stupidPrompt); //DISMISS NOTIFICATION SCREEN
+			}
 			debuglog(`xpath: ${homeTweet.x.path}`,2) //PRINT XPATH OF CURRENT TWEET
 			await elements.waitFor(driver, homeTweet.x.path,args.timeOut); //WAIT UNTIL CURRENT TWEET IS LOADED
 
 			await homeTweet.identifyElements(driver); //IDENTIFY WHAT ELEMENTS EXIST WITHIN TWEET
-
-			if ((((homeTweet.isRT || homeTweet.isAR) || homeTweet.isPin) || (!args.enableQuotes && homeTweet.isQT)) || (!args.enableThreads && homeTweet.isThread) ) {//IF TWEET IS DISABLED, MARK FOR REMOVAL
-				debuglog("removing tweet",2);
+			debuglog(`tweet properties: isRT: ${homeTweet.isAR}, isAR: ${homeTweet.isAR}, isPin: ${homeTweet.isPin}, isQT: ${homeTweet.isQT}, isThread: ${homeTweet.isThread}`)
+			debuglog(homeTweet.isRT || homeTweet.isAR);
+			debuglog(homeTweet.isPin);
+			debuglog(!args.enableQuotes && homeTweet.isQT);
+			debuglog((!args.enableThreads && homeTweet.isThread));
+			if ((((homeTweet.isRT || homeTweet.isAR) || homeTweet.isPin) || (!args.enableQuotes && homeTweet.isQT)) || (!args.enableThreads && homeTweet.isThread)) {//IF TWEET IS DISABLED, MARK FOR REMOVAL
+				debuglog(`removing tweet ${homeTweet.url}`,2);
 				homeTweet.keep = false; //INDICATE THAT WE ARE NOT READY TO EXIT, CURRENT TWEET IS NOT ELIGIBLE FOR REPOST
 				await driver.executeScript(`var element = document.evaluate(\`${homeTweet.x.path}\`,document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null ).singleNodeValue.remove();`); //REMOVE TWEET FROM DOM TO PROCESS NEXT
 				homeTweet = new Tweets("home",1); //RESET HOME TWEET OBJECT TO MAKE NEW TWEET READY FOR CHECKING
@@ -133,16 +143,17 @@ driver.executeScript("document.body.style.zoom='35%'");
 				await elements.waitFor(driver,threadTweet.x.containsDivs,args.timeOut);
 				await driver.executeScript("document.body.style.zoom='20%'");
 				await driver.executeScript("window.scrollTo(0, 0)");
-				//await driver.executeScript("window.scrollTo(0, -document.body.scrollHeight)");
 				
 				await elements.waitFor(driver,threadTweet.x.containsDivs,args.timeOut); //WAIT UNTIL THREAD IS POPULATED WITH DIVS
 				
-				for (var r = 1; !threadTweet.entryIsOpen; r++) {//LOOP UNTIL INDICATED THAT WE'VE REACHED THE ENTRY TWEET
+				for (var r = 1; !threadTweet.entryNotOpen; r++) {//LOOP UNTIL INDICATED THAT WE'VE REACHED THE ENTRY TWEET
 					threadTweet = new Tweets("thread", r); //RESETS ALL THREAD TWEET VARIABLES TO START FRESH
 					
 					debuglog(threadTweet.x.path,2); //PRINTS XPATH TO CURRENT ITERATE DIV
-					threadTweet.entryIsOpen = await elements.doesExist(driver,threadTweet.x.entryTweet) // CHECKS IF THE CURRENT ITERATE DIV IS THE ONE USED TO OPEN THE THREAD
-					if (!threadTweet.entryIsOpen){ //CURRENT ITERATE DIV DOES NOT CONTAIN THE TWEET USED TO OPEN THE THREAD
+					debuglog(await elements.getText(driver,threadTweet.x.path),2)
+					threadTweet.entryNotOpen = await elements.doesExist(driver,threadTweet.x.notEntryTweet) // CHECKS IF THE CURRENT ITERATE DIV IS THE ONE USED TO OPEN THE THREAD
+					if (threadTweet.entryNotOpen){ //CURRENT ITERATE DIV DOES NOT CONTAIN THE TWEET USED TO OPEN THE THREAD
+						
 						debuglog(`current tweet #${threadTweet.no} is not entry to thread`,2);
 
 						await threadTweet.identifyElements(driver); //IDENTIFIES WHAT THE TWEET CONTAINS
@@ -203,7 +214,6 @@ driver.executeScript("document.body.style.zoom='35%'");
 		}
 		
 		if (homeTweet.no < args.tweetCount) {driver.executeScript(`var element = document.evaluate(\`${homeTweet.x.path}\`,document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null ).singleNodeValue.remove();`);}//REMOVE TWEET FROM DOM TO PROCESS NEXT TWEET
-    	
 	}
 
 	var csvArray = csvOutput.split(/[\r\n]+/);
@@ -247,9 +257,10 @@ driver.executeScript("document.body.style.zoom='35%'");
 			twt.id = await mastodon.postStatus(twt,csvFileName,csvOutput);
 		}
 	}
-	allTweetsArray.forEach((twt,index) => {//DEBUGGING, PRINTS INFO ON TWEETS
+	/*allTweetsArray.forEach((twt,index) => {//DEBUGGING, PRINTS INFO ON TWEETS
 		debuglog(`${String(index).padStart(2,0)}: ${twt.body.substring(0,20)}..., ${twt.url}, ${twt.prompturl}, ${twt.id}, ${twt.prompt}, is reply: ${twt.isReply}, posted: ${twt.posted}`,2)
-	});
+		debuglog(`${String(index).padStart(2,0)} ${twt.handle}: ${twt.body.substring(0,40).concat("...").padEnd(45," ").substring(0,43)}, ${twt.imgCount}, ${twt.imgArray}`,2);
+	});*/
 
 
 	debuglog("Cleaning up...",1); //REMOVE SAVED IMAGES
