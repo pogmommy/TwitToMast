@@ -59,6 +59,7 @@ class Tweets {
 		this.hasMultiImage = false;
 		this.hasImages = false;
 		this.imgArray = [];
+		this.imgAltArray = [];
 		this.imgCount = 0;
 		this.imgUrl = "";
 		this.iterateExists = false;
@@ -212,6 +213,9 @@ class Tweets {
 		if (this.hasSingleImage) {
 			debuglog(`${this.orig} Tweet #${this.no} contains a single image.`, 2)
 			this.imgCount = 1;
+			var imgAltText = await elements.getAttribute(driver,this.x.singleImage,"alt")
+			this.imgAltArray.push(imgAltText);
+			debuglog(this.imgAltArray,2);
 			var origImageURL = await elements.getAttribute(driver,this.x.singleImage,"src")
 			const reg = /&name=\w+/
 			this.imgUrl = origImageURL.replace(reg, "&name=large");
@@ -229,6 +233,9 @@ class Tweets {
 					this.iterateExists = await elements.doesExist(driver,this.x.multiImages(x,y));
 					if (this.iterateExists) {
 						debuglog(`${x},${y} Exists!`);
+						var imgAltText = await elements.getAttribute(driver,this.x.multiImages(x,y),"alt")
+						this.imgAltArray.push(imgAltText);
+						debuglog(this.imgAltArray,2);
 						var origImageURL = await elements.getAttribute(driver,this.x.multiImages(x,y),'src')
 						const reg = /&name=\w+/
 						this.imgUrl = origImageURL.replace(reg, "&name=large");
@@ -253,7 +260,8 @@ class Tweets {
 		for (var f = 1; f < (this.imgCount+1); f++) {
 			var jpgPath = `${imgSavePath}${this.orig == 'home' ? '' : 'r'}${this.no}.${f}.jpg`
 			debuglog(`uploading image to mastodon: ${jpgPath}`);
-			var imgid = await mastodon.postMedia(jpgPath)
+			debuglog(this.imgAltArray);
+			var imgid = await mastodon.postMedia(jpgPath,this.imgAltArray[f-1]);
 			debuglog(`mastodon image id: ${imgid}`);
 			this.imgArray.push(imgid);
 		}

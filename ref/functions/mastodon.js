@@ -19,11 +19,16 @@ function setupMastodon(){
 	return M;
 }
 
-async function postMedia(path){
+async function postMedia(path,alt){
 	id = 0;
+	if (alt == null) {
+		alt = "Image";
+	}
 	if (args.enablePosts){
 		var M = setupMastodon();
-		await M.post('media', { file: fs.createReadStream(path) }).then(resp => {
+		params = { file: fs.createReadStream(path) }
+		Object.assign(params, { description: alt });
+		await M.post('media', params).then(resp => {
 			id = resp.data.id;
 		}, function(err) {
 			if (err) {
