@@ -15,6 +15,7 @@ class Args {
 		this.enableQuotes = this.getFlag("q"); //enable cross-posting quote tweets
 		this.enableThreads = this.getFlag("t"); //enable cross-posting thread tweets
 		this.reQuotes = this.getFlag("r"); //put links to quote tweets at top of mastodon posts
+		this.warnings = this.getFlag("s");
 
 		var userNamePreFormat = this.getArgument("-u","Twitter",false);
 		this.userName = userNamePreFormat.replace('@','')

@@ -1,7 +1,7 @@
 
 {Usage}
-        {node ./TwitToMast.js} [{-htqrpmbc}] [{-u} ~username~] [{-n} ~tweetcount~] [{-d} ~debuglevel~] [{-w} ~timeout~]
-        {node ./multi.js} [{-htqrpmbc}] [{-n} ~tweetcount~] [{-d} ~debuglevel~] [{-w} ~timeout~]
+        {node ./TwitToMast.js} [{-htqrspmbc}] [{-u} ~username~] [{-n} ~tweetcount~] [{-d} ~debuglevel~] [{-w} ~timeout~]
+        {node ./multi.js} [{-htqrspmbc}] [{-n} ~tweetcount~] [{-d} ~debuglevel~] [{-w} ~timeout~]
  
 {Arguments}
         {-h:}                - show help screen (you made it here!)
@@ -15,6 +15,8 @@
         {-q:}                - quote tweets will be included in the scan
         {-r:}                - Link to quoted tweet will appear in the header, preceded by "re: "
                                 - default behavior posts link at bottom of Mastodon post preceded by "Quoting "
+        {-s:}                - Enable content warning/spoiler prefixes
+                                - tweets beginning with a certain string (defined in config.txt) will use following text on the same line as Mastodon content warning
         {-p:}                - enable/disable posting to Mastodon
         {-m:}                - include user's name, handle, and link to tweet
         {-b:}                - display browser (disable headless mode)
@@ -33,6 +35,10 @@
                            - Your Access Token obtained from Mastodon > Preferences > Development > Application
         {Line 2: API_URL}
                            - https://~your mastodon server url~/api/v1/
+        {Line 3: CONTENT_WARNING_PREFIX}
+                           - if enabled, tweets beginning with this string will use following text on the same line as Mastodon content warning
+                           - Commonly used content warning prefixes on twitter are "CW//", "TW//", and "SPOILER//"
+                           - Starting a tweet with "SPOILER// Endgame Spoilers" with hide the contents of the crossposted toot behind a warning reading "Endgame Spoilers"
  
 {Examples}
         {Scrape 10 most recent tweets, quote tweets, and thread tweets from @twitter account, and post to Mastodon}

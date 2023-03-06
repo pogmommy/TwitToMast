@@ -1,5 +1,6 @@
 const webdriver = require('selenium-webdriver');
 const By = webdriver.By;
+const fs = require('fs');
 //const { format } = require('fast-csv');
 
 const elements = require('../functions/elements.js');		//link support.js
@@ -45,6 +46,7 @@ class Tweets {
 		//body
 		this.hasBody = false;
 		this.body = "";
+		this.spoiler = "";
 		this.hasLinks = false;
 		this.links = "";
 
@@ -164,7 +166,20 @@ class Tweets {
 					debuglog("Found  emoji!",2);
 					//this.threadLength = elements.length;
 				});*/
-			const bodyText = await elements.getText(driver,this.x.tweetText);//SET TWEET BODY TO TEXT OF TWEET
+			var bodyText = await elements.getText(driver,this.x.tweetText);//SET TWEET BODY TO TEXT OF TWEET
+			if (args.warnings) {
+				const WarningPrefix = fs.readFileSync("./config.txt").toString().split(/[\r\n]+/)[2];
+				var cwRegexText = new RegExp(`(?<=^${WarningPrefix}[^\\n]*)[\\w].+`, "g");
+				debuglog(cwRegexText);
+				debuglog("content warning text:")
+				debuglog(bodyText.match(cwRegexText));
+				this.spoiler = bodyText.match(cwRegexText)[0];
+				var cwRegexPref = new RegExp(`^${WarningPrefix}.+\\n(\\s)+`, "g");
+				debuglog(cwRegexPref);
+				debuglog("content warning text w pref:")
+				debuglog(bodyText.match(cwRegexPref));
+				bodyText = bodyText.replace(cwRegexPref,"");
+			}
 			this.appendSection(bodyText,'body');
 			debuglog(`Tweet Body:\r\n${this.body}`);
 		}

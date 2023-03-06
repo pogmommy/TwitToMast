@@ -22,12 +22,14 @@ npm install
 	- Replace "API_KEY" on line 1 with the Access Token you retrieved in the previous step
 	- Replace "API_URL" on line 2 with your Mastodon instance's API URL
 		- This will look like "https://mastodon.social/api/v1/", replacing "mastodon.social" with the domain you registered your account through
+	- Replace "CONTENT_WARNING_PREFIX" on line 3 with your preferred spoiler/content warning prefix if you plan to use this feature
+		- commonly used prefixes include "CW//", "TW//", and "SPOILER//"
 	
 ## Usage
 
 ```
-node ./TwitToMast.js [-htqrpmbc] [-u username] [-n tweetcount] [-d debuglevel] [-w timeout]
-node ./multi.js [-htqrpmbc] [-n tweetcount] [-d debuglevel] [-w timeout]
+node ./TwitToMast.js [-htqrspmbc] [-u username] [-n tweetcount] [-d debuglevel] [-w timeout]
+node ./multi.js [-htqrspmbc] [-n tweetcount] [-d debuglevel] [-w timeout]
 ```
 
 ## Arguments
@@ -44,6 +46,8 @@ node ./multi.js [-htqrpmbc] [-n tweetcount] [-d debuglevel] [-w timeout]
 	-q:	- quote tweets will be included in the scan
 	-r:	- Link to quoted tweet will appear in the header, preceded by "re: "
 			- default behavior posts link at bottom preceded by "Quoting "
+	-s:	- Enable content warning prefixes
+            - tweets beginning with a certain string (defined in config.txt) will use following text on the same line as Mastodon content warning
 	-p:	- enable/disable posting to Mastodon
 	-m:	- include user's name, handle, and link to tweet
 	-b:	- display browser (disable headless mode)

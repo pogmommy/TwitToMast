@@ -56,6 +56,11 @@ async function postStatus(tweet,file,csvc){
 			debuglog("reply to: " + tweet.prompt,2)
 			Object.assign(params, { in_reply_to_id: tweet.prompt });
 		}
+		if (tweet.spoiler != "") {//POST IS A REPLY
+			debuglog("spoiler: " + tweet.spoiler,2)
+			Object.assign(params, { sensitive: true });
+			Object.assign(params, { spoiler_text: tweet.spoiler });
+		}
 		await M.post('statuses', params, (err, data) => {
 			if (err) {
 				debuglog(format.error(`Post to Mastodon failed with error: ${err}`), 1);
