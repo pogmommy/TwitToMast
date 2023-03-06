@@ -212,7 +212,10 @@ class Tweets {
 		if (this.hasSingleImage) {
 			debuglog(`${this.orig} Tweet #${this.no} contains a single image.`, 2)
 			this.imgCount = 1;
-			this.imgUrl = await elements.getAttribute(driver,this.x.singleImage,"src")
+			var origImageURL = await elements.getAttribute(driver,this.x.singleImage,"src")
+			const reg = /&name=\w+/
+			this.imgUrl = origImageURL.replace(reg, "&name=large");
+			debuglog(`downloading image from: ${this.imgUrl}`,2);
 			const jpgPath = `${imgSavePath}${this.orig == 'home' ? '' : 'r'}${this.no}.${this.imgCount}.jpg`
 			await funcs.downloadImage(this.imgUrl, jpgPath)
 				.then(debuglog)
@@ -226,7 +229,10 @@ class Tweets {
 					this.iterateExists = await elements.doesExist(driver,this.x.multiImages(x,y));
 					if (this.iterateExists) {
 						debuglog(`${x},${y} Exists!`);
-						this.imgUrl = await elements.getAttribute(driver,this.x.multiImages(x,y),'src')
+						var origImageURL = await elements.getAttribute(driver,this.x.multiImages(x,y),'src')
+						const reg = /&name=\w+/
+						this.imgUrl = origImageURL.replace(reg, "&name=large");
+						debuglog(`downloading image from: ${this.imgUrl}`,2);
 						debuglog(this.imgUrl,2);
 						this.imgCount++
 						const jpgPath = `${imgSavePath}${this.orig == 'home' ? '' : 'r'}${this.no}.${this.imgCount}.jpg`
