@@ -1,3 +1,5 @@
+# Currently Broken- Repairs are a low priority at present
+
 # TwitToMast
 Bypass paywalled APIs to crosspost from Twitter to Mastodon
 
